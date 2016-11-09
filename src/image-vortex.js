@@ -2,7 +2,6 @@ const url = require('url');
 const request = require('request');
 const cheerio = require('cheerio');
 
-
 const extractImageURL = (pageURL, imageSrc)=> {
     const srcObj = url.parse(imageSrc);
     if (srcObj.host) {
