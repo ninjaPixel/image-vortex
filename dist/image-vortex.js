@@ -23,14 +23,41 @@ var ImageVortex = function () {
 
     _createClass(ImageVortex, [{
         key: 'saveImageToS3',
-        value: function saveImageToS3(sourceURL, destinationFileName) {
+        value: function saveImageToS3(imageURL, destinationFileName, callback) {
             var _this = this;
 
+            request({
+                url: imageURL,
+                encoding: null
+            }, function (err, res, body) {
+                if (err) {
+                    return callback(err, res);
+                }
+
+                _this._s3.putObject({
+                    Bucket: _this._bucketName,
+                    Key: destinationFileName,
+                    ContentType: res.headers['content-type'],
+                    ContentLength: res.headers['content-length'],
+                    Body: body
+                }, callback);
+            });
+        }
+    }, {
+        key: 'test',
+        value: function test(sourceURL, destinationFileName) {
+            var _this2 = this;
+
             this._s3.createBucket({ Bucket: this._bucketName }, function () {
-                var params = { Bucket: _this._bucketName, Key: destinationFileName, Body: 'Hello World!' };
+                var params = { Bucket: _this2._bucketName, Key: destinationFileName, Body: 'Hello World!' };
                 console.log('params', params);
-                _this._s3.putObject(params, function (err, data) {
-                    if (err) console.log(err);else console.log("Successfully uploaded data to " + _this._bucketName + "/" + destinationFileName);
+                _this2._s3.putObject(params, function (err, data) {
+
+                    if (err) {
+                        throw err;
+                    }
+
+                    console.log("Successfully uploaded data to " + _this2._bucketName + "/" + destinationFileName);
                 });
             });
         }
