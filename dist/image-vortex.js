@@ -9,6 +9,7 @@ var request = require('request');
 var cheerio = require('cheerio');
 var AWS = require('aws-sdk');
 var uuid = require('node-uuid');
+var sharp = require('sharp');
 
 var ImageVortex = function () {
     function ImageVortex(_ref) {
@@ -41,24 +42,6 @@ var ImageVortex = function () {
                     ContentLength: res.headers['content-length'],
                     Body: body
                 }, callback);
-            });
-        }
-    }, {
-        key: 'test',
-        value: function test(sourceURL, destinationFileName) {
-            var _this2 = this;
-
-            this._s3.createBucket({ Bucket: this._bucketName }, function () {
-                var params = { Bucket: _this2._bucketName, Key: destinationFileName, Body: 'Hello World!' };
-                console.log('params', params);
-                _this2._s3.putObject(params, function (err, data) {
-
-                    if (err) {
-                        throw err;
-                    }
-
-                    console.log("Successfully uploaded data to " + _this2._bucketName + "/" + destinationFileName);
-                });
             });
         }
     }], [{
@@ -94,6 +77,22 @@ var ImageVortex = function () {
                     }
                 });
             });
+        }
+    }, {
+        key: 'imageDimensions',
+        value: function imageDimensions(imagePath) {
+            var image = sharp(imagePath);
+            return image.metadata().then(function (metadata) {
+                return metadata;
+            });
+        }
+    }, {
+        key: 'resizeImage',
+        value: function resizeImage(readableStream, writableStream) {
+            var transformer = sharp().resize(300).on('info', function (info) {
+                console.log('Image height is ' + info.height);
+            });
+            readableStream.pipe(transformer).pipe(writableStream);
         }
     }]);
 

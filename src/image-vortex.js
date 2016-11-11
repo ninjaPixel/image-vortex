@@ -3,6 +3,7 @@ const request = require('request');
 const cheerio = require('cheerio');
 const AWS = require('aws-sdk');
 const uuid = require('node-uuid');
+var sharp = require('sharp');
 
 
 class ImageVortex {
@@ -30,7 +31,6 @@ class ImageVortex {
         }, (err, res, body)=> {
             if (err) {
                 return callback(err, res);
-                
             }
             
             this._s3.putObject({
@@ -41,23 +41,6 @@ class ImageVortex {
                 Body: body
             }, callback);
         })
-    }
-    
-    
-    test(sourceURL, destinationFileName) {
-        this._s3.createBucket({Bucket: this._bucketName}, ()=> {
-            const params = {Bucket: this._bucketName, Key: destinationFileName, Body: 'Hello World!'};
-            console.log('params', params);
-            this._s3.putObject(params, (err, data)=> {
-                
-                if (err) {
-                    throw err;
-                    
-                }
-                
-                console.log("Successfully uploaded data to " + this._bucketName + "/" + destinationFileName);
-            });
-        });
     }
     
     static getImageURLs(pageURL) {
@@ -78,8 +61,26 @@ class ImageVortex {
                 }
             });
         });
-    };
+    }
     
+    
+    static imageDimensions(imagePath) {
+        var image = sharp(imagePath);
+         return image.metadata()
+          .then(function (metadata) {
+              return metadata;
+          });
+        
+    }
+    
+    static resizeImage(readableStream, writableStream) {
+        var transformer = sharp()
+          .resize(300)
+          .on('info', function (info) {
+              console.log('Image height is ' + info.height);
+          });
+        readableStream.pipe(transformer).pipe(writableStream);
+    }
 }
 
 module.exports = ImageVortex;
