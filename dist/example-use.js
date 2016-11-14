@@ -35,36 +35,52 @@ var vortex = new ImageVortex(ivParams);
 var widths = [400, 200];
 
 var shrinkWrap = function shrinkWrap(imagePath) {
-    var format = 'jpeg';
-    console.log('Execute shrinkwrap');
-    ImageVortex.imageDimensions(imagePath).then(function (meta) {
-        // console.log('meta', meta);
-        var downSizeWidths = widths.filter(function (d) {
-            return d <= meta.width;
-        });
-        downSizeWidths.forEach(function (width) {
-            console.log('Resizing ' + imagePath + ' to a width of ' + width + 'px');
-            var fileName = width + 'px.' + format;
-            var path = 'temp/' + fileName;
+    var shrinkWrappedPromise = new Promise(function (resolve, reject) {
+        var format = 'jpeg';
+        ImageVortex.imageDimensions(imagePath).then(function (meta) {
 
-            ImageVortex.resizeToWidth(imagePath, path, width, format).then(function (data) {
-                console.log('Resized ' + imagePath + ' to a width of ' + width + 'px');
-                // upload image to Amazon S3
-                vortex.saveFileToS3(fs.createReadStream(path), 'chains/' + chainID + '/' + fileName).then(function (data) {
-                    console.log('Uploaded ' + path + ' to S3', data.Location);
-                }, function (error) {
-                    console.log('Error uploading ' + path + ' to S3: ' + error);
-                });
-            }).catch(function (err) {
-                console.error('Error in resizeToWidth:', err);
+            var downSizeWidths = widths.filter(function (d) {
+                return d <= meta.width;
             });
+
+            var promises = downSizeWidths.map(function (width) {
+                // console.log(`Resizing ${imagePath} to a width of ${width}px`);
+                var fileName = width + 'px.' + format;
+                var path = 'temp/' + fileName;
+
+                return new Promise(function (resolve, reject) {
+                    ImageVortex.resizeToWidth(imagePath, path, width, format).then(function (data) {
+                        // console.log(`Resized ${imagePath} to a width of ${width}px`);
+                        // upload image to Amazon S3
+                        vortex.saveFileToS3(fs.createReadStream(path), 'chains/' + chainID + '/' + fileName).then(function (data) {
+                            // console.log(`Uploaded ${path} to S3`, data.Location);
+                            resolve(data.Location);
+                        }, function (error) {
+                            console.error('Error uploading ' + path + ' to S3: ' + error);
+                            reject(error);
+                        });
+                    }).catch(function (err) {
+                        console.error('Error in resizeToWidth:', err);
+                        reject(err);
+                    });
+                });
+            });
+            resolve(promises);
         });
     });
+
+    return shrinkWrappedPromise;
 };
 
 var imagePath = 'tiger.jpg';
 ImageVortex.saveImageFromURLtoFile('http://www.planwallpaper.com/static/images/desktop-year-of-the-tiger-images-wallpaper.jpg', imagePath).then(function (success) {
-    shrinkWrap(imagePath);
+    var shrinkFunctions = shrinkWrap(imagePath).then(function (data) {
+        Promise.all(data).then(function (values) {
+            console.log('All images uploaded. URLs:', values);
+        }).catch(function (err) {
+            console.error('Error uploading images:', err);
+        });
+    });
 }).catch(function (error) {
     console.error('There was an error:', error);
 });

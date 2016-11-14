@@ -111,15 +111,18 @@ var ImageVortex = function () {
     }, {
         key: 'imageDimensions',
         value: function imageDimensions(imagePath) {
-            var image = sharp(imagePath);
-            return image.metadata().then(function (metadata) {
-                return metadata;
+            var promise = new Promise(function (resolve, reject) {
+                var image = sharp(imagePath);
+                return image.metadata().then(function (metadata) {
+                    resolve(metadata);
+                });
             });
+            return promise;
         }
     }, {
         key: 'resizeToWidth',
         value: function resizeToWidth(sourcePath, destinationPath, width) {
-            var format = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 'jpg';
+            var format = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 'jpeg';
 
             var promise = new Promise(function (resolve, reject) {
                 var img = sharp(sourcePath);

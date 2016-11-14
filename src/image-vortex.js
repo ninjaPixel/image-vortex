@@ -96,21 +96,24 @@ class ImageVortex {
     
     
     static imageDimensions(imagePath) {
-        var image = sharp(imagePath);
-        return image.metadata()
-          .then(function (metadata) {
-              return metadata;
-          });
+        const promise = new Promise((resolve, reject)=> {
+            var image = sharp(imagePath);
+            return image.metadata()
+              .then((metadata)=> {
+                  resolve(metadata);
+              });
+        });
+        return promise;
         
     }
     
-    static resizeToWidth(sourcePath, destinationPath, width, format = 'jpg') {
+    static resizeToWidth(sourcePath, destinationPath, width, format = 'jpeg') {
         const promise = new Promise((resolve, reject)=> {
             let img = sharp(sourcePath);
-            img.resize(width).toFormat(format).toFile(destinationPath, (error,data)=>{
-                if(error){
+            img.resize(width).toFormat(format).toFile(destinationPath, (error, data)=> {
+                if (error) {
                     reject(error);
-                }else{
+                } else {
                     resolve(data);
                 }
             });
