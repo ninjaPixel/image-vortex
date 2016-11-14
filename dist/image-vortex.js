@@ -10,6 +10,7 @@ var cheerio = require('cheerio');
 var AWS = require('aws-sdk');
 var uuid = require('node-uuid');
 var sharp = require('sharp');
+var fs = require('fs');
 
 var ImageVortex = function () {
     function ImageVortex(_ref) {
@@ -23,8 +24,8 @@ var ImageVortex = function () {
     }
 
     _createClass(ImageVortex, [{
-        key: 'saveImageToS3',
-        value: function saveImageToS3(imageURL, destinationFileName, callback) {
+        key: 'saveImageFromURLToS3',
+        value: function saveImageFromURLToS3(imageURL, destinationFileName, callback) {
             var _this = this;
 
             request({
@@ -44,7 +45,36 @@ var ImageVortex = function () {
                 }, callback);
             });
         }
+    }, {
+        key: 'saveFileToS3',
+        value: function saveFileToS3(readableStream, destinationFileName) {
+            var upload = this._s3.upload({ Bucket: this._bucketName, Key: destinationFileName, Body: readableStream });
+            var promise = upload.promise();
+            return promise;
+        }
     }], [{
+        key: 'saveImageFromURLtoFile',
+        value: function saveImageFromURLtoFile(imageURL, destinationFileName) {
+            var promise = new Promise(function (resolve, reject) {
+                request({
+                    url: imageURL,
+                    encoding: null
+                }, function (err, res, body) {
+                    if (err) {
+                        reject(err);
+                    }
+                    fs.writeFile(destinationFileName, body, function (err) {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve({ success: true });
+                        }
+                    });
+                });
+            });
+            return promise;
+        }
+    }, {
         key: 'extractImageURL',
         value: function extractImageURL(pageURL, imageSrc) {
             var srcObj = url.parse(imageSrc);
@@ -87,12 +117,22 @@ var ImageVortex = function () {
             });
         }
     }, {
-        key: 'resizeImage',
-        value: function resizeImage(readableStream, writableStream) {
-            var transformer = sharp().resize(300).on('info', function (info) {
-                console.log('Image height is ' + info.height);
+        key: 'resizeToWidth',
+        value: function resizeToWidth(sourcePath, destinationPath, width) {
+            var format = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 'jpg';
+
+            var promise = new Promise(function (resolve, reject) {
+                var img = sharp(sourcePath);
+                img.resize(width).toFormat(format).toFile(destinationPath, function (error, data) {
+                    if (error) {
+                        reject(error);
+                    } else {
+                        resolve(data);
+                    }
+                });
             });
-            readableStream.pipe(transformer).pipe(writableStream);
+
+            return promise;
         }
     }]);
 

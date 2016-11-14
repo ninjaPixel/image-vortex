@@ -3,7 +3,8 @@ const request = require('request');
 const cheerio = require('cheerio');
 const AWS = require('aws-sdk');
 const uuid = require('node-uuid');
-var sharp = require('sharp');
+const sharp = require('sharp');
+const fs = require('fs');
 
 
 class ImageVortex {
@@ -12,6 +13,30 @@ class ImageVortex {
         this._s3 = new AWS.S3();
         this._bucketName = bucketName;
     }
+    
+    static saveImageFromURLtoFile(imageURL, destinationFileName) {
+        const promise = new Promise((resolve, reject)=> {
+            request({
+                url: imageURL,
+                encoding: null
+            }, (err, res, body)=> {
+                if (err) {
+                    reject(err);
+                }
+                fs.writeFile(destinationFileName, body, function (err) {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve({success: true});
+                    }
+                });
+                
+            });
+        });
+        return promise;
+        
+    }
+    
     
     static extractImageURL(pageURL, imageSrc) {
         const srcObj = url.parse(imageSrc);
@@ -24,7 +49,7 @@ class ImageVortex {
         
     };
     
-    saveImageToS3(imageURL, destinationFileName, callback) {
+    saveImageFromURLToS3(imageURL, destinationFileName, callback) {
         request({
             url: imageURL,
             encoding: null
@@ -40,7 +65,13 @@ class ImageVortex {
                 ContentLength: res.headers['content-length'],
                 Body: body
             }, callback);
-        })
+        });
+    }
+    
+    saveFileToS3(readableStream, destinationFileName) {
+        const upload = this._s3.upload({Bucket: this._bucketName, Key: destinationFileName, Body: readableStream});
+        const promise = upload.promise();
+        return promise;
     }
     
     static getImageURLs(pageURL) {
@@ -66,20 +97,26 @@ class ImageVortex {
     
     static imageDimensions(imagePath) {
         var image = sharp(imagePath);
-         return image.metadata()
+        return image.metadata()
           .then(function (metadata) {
               return metadata;
           });
         
     }
     
-    static resizeImage(readableStream, writableStream) {
-        var transformer = sharp()
-          .resize(300)
-          .on('info', function (info) {
-              console.log('Image height is ' + info.height);
-          });
-        readableStream.pipe(transformer).pipe(writableStream);
+    static resizeToWidth(sourcePath, destinationPath, width, format = 'jpg') {
+        const promise = new Promise((resolve, reject)=> {
+            let img = sharp(sourcePath);
+            img.resize(width).toFormat(format).toFile(destinationPath, (error,data)=>{
+                if(error){
+                    reject(error);
+                }else{
+                    resolve(data);
+                }
+            });
+        });
+        
+        return promise;
     }
 }
 
