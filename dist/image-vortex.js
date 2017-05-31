@@ -90,17 +90,26 @@ var ImageVortex = function () {
         value: function getImageURLs(pageURL) {
             var extractImageURL = this.extractImageURL;
 
+            var options = {
+                url: pageURL,
+                headers: {
+                    'User-Agent': 'request'
+                }
+            };
+
             return new Promise(function (resolve, reject) {
-                request(pageURL, function (error, response, html) {
+                request(options, function (error, response, html) {
                     if (!error) {
                         (function () {
                             var $ = cheerio.load(html);
                             var imageURLs = new Set();
                             $("img").each(function (i, e) {
                                 var src = $(e).attr("src");
-                                imageURLs.add(extractImageURL(pageURL, src));
+                                if (src && !src.startsWith('data:image')) {
+                                    imageURLs.add(extractImageURL(pageURL, src));
+                                }
                             });
-                            resolve(imageURLs.values());
+                            resolve(Array.from(imageURLs));
                         })();
                     } else {
                         reject(error);

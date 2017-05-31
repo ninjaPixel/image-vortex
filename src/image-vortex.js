@@ -77,16 +77,25 @@ class ImageVortex {
     static getImageURLs(pageURL) {
         const extractImageURL = this.extractImageURL;
         
+        const options = {
+            url: pageURL,
+            headers: {
+                'User-Agent': 'request'
+            }
+        };
+        
         return new Promise((resolve, reject)=> {
-            request(pageURL, function (error, response, html) {
+            request(options, function (error, response, html) {
                 if (!error) {
                     const $ = cheerio.load(html);
                     const imageURLs = new Set();
                     $("img").each((i, e) => {
                         const src = $(e).attr("src");
-                        imageURLs.add(extractImageURL(pageURL, src));
+                        if (src && !src.startsWith('data:image')) {
+                            imageURLs.add(extractImageURL(pageURL, src));
+                        }
                     });
-                    resolve(imageURLs.values());
+                    resolve(Array.from(imageURLs));
                 } else {
                     reject(error);
                 }

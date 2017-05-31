@@ -2,7 +2,7 @@ const ImageVortex = require('./image-vortex');
 const fs = require('fs');
 
 // get a list of image srcs from a web page
-// ImageVortex.getImageURLs('http://www.ninjaPixel.io').then((data)=> {
+// ImageVortex.getImageURLs('http://hotnumberscoffee.co.uk/').then((data)=> {
 //     console.log(data);
 // }).catch((err)=> {
 //     console.log(err);
@@ -26,65 +26,73 @@ const fs = require('fs');
 // const writableStream = fs.createWriteStream('./temp/averyuniquename.jpg');
 
 // ImageVortex.resizeImage(readableStream, writableStream);
-const chainID = 2;
-const ivParams = {bucketName: 'images.glulessapp.com'};
-const vortex = new ImageVortex(ivParams);
-// const widths = [4000, 3000, 2600, 2048, 1600, 1200, 1000, 800, 600, 400, 200];
-const widths = [400, 200];
-
-
-const shrinkWrap = (imagePath)=> {
-    const shrinkWrappedPromise = new Promise((resolve, reject)=> {
-        const format = 'jpeg';
-        ImageVortex.imageDimensions(imagePath).then((meta)=> {
-            
-            const downSizeWidths = widths.filter((d)=> {
-                return d <= meta.width
-            });
-            
-            const promises =downSizeWidths.map((width)=> {
-                // console.log(`Resizing ${imagePath} to a width of ${width}px`);
-                const fileName = `${width}px.${format}`;
-                const path = `temp/${fileName}`;
+const testResize = true;
+if (testResize) {
+    
+    
+    const chainID = 3;
+    const ivParams = {bucketName: 'images.glulessapp.com'};
+    const vortex = new ImageVortex(ivParams);
+    const widths = [4000, 3000, 2600, 2048, 1600, 1200, 1000, 800, 600, 400, 200];
+// const widths = [400, 200];
+    
+    
+    const shrinkWrap = (imagePath)=> {
+        const shrinkWrappedPromise = new Promise((resolve, reject)=> {
+            const format = 'jpeg';
+            ImageVortex.imageDimensions(imagePath).then((meta)=> {
                 
-                return new Promise((resolve, reject)=> {
-                    ImageVortex.resizeToWidth(imagePath, path, width, format).then((data)=> {
-                        // console.log(`Resized ${imagePath} to a width of ${width}px`);
-                        // upload image to Amazon S3
-                        vortex.saveFileToS3(fs.createReadStream(path), `chains/${chainID}/${fileName}`).then((data)=> {
-                            // console.log(`Uploaded ${path} to S3`, data.Location);
-                            resolve(data.Location);
-                        }, (error)=> {
-                            console.error(`Error uploading ${path} to S3: ${error}`);
-                            reject(error);
-                            
+                const downSizeWidths = widths.filter((d)=> {
+                    return d <= meta.width
+                });
+                
+                const promises = downSizeWidths.map((width)=> {
+                    // console.log(`Resizing ${imagePath} to a width of ${width}px`);
+                    const fileName = `${width}px.${format}`;
+                    const path = `temp/${fileName}`;
+                    
+                    return new Promise((resolve, reject)=> {
+                        ImageVortex.resizeToWidth(imagePath, path, width, format).then((data)=> {
+                            // console.log(`Resized ${imagePath} to a width of ${width}px`);
+                            // upload image to Amazon S3
+                            vortex.saveFileToS3(fs.createReadStream(path), `chains/${chainID}/${fileName}`).then((data)=> {
+                                // console.log(`Uploaded ${path} to S3`, data.Location);
+                                resolve(data.Location);
+                            }, (error)=> {
+                                console.error(`Error uploading ${path} to S3: ${error}`);
+                                reject(error);
+                                
+                            });
+                        }).catch((err)=> {
+                            console.error('Error in resizeToWidth:', err);
+                            reject(err);
                         });
-                    }).catch((err)=> {
-                        console.error('Error in resizeToWidth:', err);
-                        reject(err);
                     });
                 });
+                resolve(promises);
             });
-            resolve(promises);
-        });
-    });
-    
-    return shrinkWrappedPromise;
-};
-
-
-const imagePath = 'tiger.jpg';
-ImageVortex.saveImageFromURLtoFile('http://www.planwallpaper.com/static/images/desktop-year-of-the-tiger-images-wallpaper.jpg', imagePath).then((success)=> {
-    const shrinkFunctions = shrinkWrap(imagePath).then((data)=> {
-        Promise.all(data).then((values)=>{
-            console.log('All images uploaded. URLs:',values)
-        }).catch((err)=>{
-            console.error('Error uploading images:', err);
         });
         
+        return shrinkWrappedPromise;
+    };
+    
+    
+    const imagePath = 'nature.jpg';
+    ImageVortex.saveImageFromURLtoFile('http://livehdwallpaper.com/wp-content/uploads/2014/12/Beautiful-Nature-Wallpapers.jpg', imagePath).then((success)=> {
+        
+        console.log('Success',success)
+        // const shrinkFunctions = shrinkWrap(imagePath).then((data)=> {
+        //     Promise.all(data).then((values)=> {
+        //         console.log('All images uploaded. URLs:', values)
+        //         // go and update mongoDB
+        //     }).catch((err)=> {
+        //         console.error('Error uploading images:', err);
+        //     });
+        //
+        // });
+        
+    }).catch((error)=> {
+        console.error('There was an error:', error)
     });
-}).catch((error)=> {
-    console.error('There was an error:', error)
-});
-
+}
 
