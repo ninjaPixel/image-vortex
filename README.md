@@ -5,6 +5,8 @@ Simple tool that returns an array of URLs scraped from the src attribute of all 
 nmp install --save image-vortex
 ```
 
+    npm run publisher
+
 
 ```
 const ImageVortex = require('image-vortex');
